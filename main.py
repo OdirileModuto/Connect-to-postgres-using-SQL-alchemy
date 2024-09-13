@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy import text
 
 
 
@@ -38,64 +39,72 @@ def get_engine():
 
  #  define your database tables
 engine = get_engine()
-
 Base = declarative_base()
 
 #  represents a table in a database
-class Account (Base):
+class Account(Base):
     __tablename__ = 'account'
     user_id = Column(Integer, primary_key=True)
     username = Column(String)
-    email_address = Column (String,unique=True)
+    email_address = Column(String, unique=True)
     security_code = Column(String)
-    jobs = relationship("Account_job", backref="account")
 
-
-
-class Account_job (Base):
+class Account_job(Base):
     __tablename__ = "account_job"
     user_id = Column(Integer, ForeignKey('account.user_id'), primary_key=True)
-    job_id = Column(Integer, primary_key=True)
+    job_id = Column(Integer, ForeignKey('job.job_id'), primary_key=True)
     hire_date = Column(Integer)
+    account = relationship("Account", backref="account_jobs")
+    job = relationship("Jobs", backref="account_jobs")
 
-class Job_Name (Base):
-    __tablename__ = "job_name"
+class Jobs(Base):
+    __tablename__ = "job"
     job_id = Column(Integer, primary_key=True)
-    job_name =Column(String)
-  
+    job_name = Column(String)
+
  
 
+
  # Create the table
-Base.metadata.create_all(engine) 
+Base.metadata.create_all(engine)  
 
 
 #  Creates a special tool (Session) to talk to the database.
 
 Session = sessionmaker(bind=engine)
 
+
 # Uses the tool (Session) to start a conversation with the database.
 
 session = Session()
 
-# data = session.query(Account).all()
-data = session.query(Account_job, Account).join(Account).all()
 
+account_jobs = session.query(Account_job,).join(Account).join(Jobs).all()
 
 
 # saves all the changes you've made to the database
 session.commit()
+ 
+  
 
-if data:
-    for account_job, account in data:
-        print(f"User ID: {account.user_id}, Username: {account.username}, Email: {account.email_address}")
-        print(f"Job ID: {account_job.job_id}, Hire Date: {account_job.hire_date}")
-       
+
+if account_jobs:
+    for account_job in account_jobs:
+        print(f"User ID: {account_job.user_id}")
+        print(f"Username: {account_job.account.username}")
+        print(f"Email Address: {account_job.account.email_address}")
+        print(f"Job ID: {account_job.job_id}")
+        print(f"Job Name: {account_job.job.job_name}")
+        print(f"Hire Date: {account_job.hire_date}")
+        print("-" * 40)  # Separator for readability
 else:
-    print("No data found.")
+    print("No data found in joined tables.")
 
 
 
 print(engine.url)
+
+
 
 
 
